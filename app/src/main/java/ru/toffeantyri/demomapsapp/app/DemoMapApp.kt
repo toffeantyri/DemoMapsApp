@@ -1,7 +1,6 @@
 package ru.toffeantyri.demomapsapp.app
 
 import android.app.Application
-import com.yandex.mapkit.MapKit
 import com.yandex.mapkit.MapKitFactory
 import ru.toffeantyri.demomapsapp.BuildConfig
 
