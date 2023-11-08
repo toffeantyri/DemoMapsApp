@@ -4,4 +4,8 @@
 
     <string name="permission_denied">Разрешение не получено</string>
     <string name="permission_granted">Разрешение получено</string>
+    <string name="search_hint">Поиск</string>
+    <string name="network_error">Нет соединения</string>
+    <string name="remote_error">Ошибка удаленного сервера</string>
+    <string name="Unknown_error">Неизвестная ошибка</string>
 </resources>
