@@ -55,7 +55,13 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     private lateinit var searchManager: SearchManager
     private lateinit var searchSession: Session
 
-    fun submitQuery(query: String) {
+    private fun submitQuery(query: String) {
+        if (query.isBlank()) {
+            val mapObj: MapObjectCollection = binding.mapview.mapWindow.map.mapObjects
+            mapObj.clear()
+            return
+        }
+
         searchSession = searchManager.submit(
             query,
             VisibleRegionUtils.toPolygon(
@@ -207,8 +213,9 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         cameraUpdateReason: CameraUpdateReason,
         finished: Boolean
     ) {
-        if (finished) {
-            submitQuery(binding.searchEditText.text.toString())
+        val requestText = binding.searchEditText.text.toString()
+        if (finished && requestText.isNotBlank()) {
+            submitQuery(requestText)
         }
     }
 
