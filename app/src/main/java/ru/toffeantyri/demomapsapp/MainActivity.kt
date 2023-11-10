@@ -14,6 +14,14 @@ import androidx.core.app.ActivityCompat
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKit
 import com.yandex.mapkit.MapKitFactory
+import com.yandex.mapkit.RequestPoint
+import com.yandex.mapkit.RequestPointType
+import com.yandex.mapkit.directions.DirectionsFactory
+import com.yandex.mapkit.directions.driving.DrivingOptions
+import com.yandex.mapkit.directions.driving.DrivingRoute
+import com.yandex.mapkit.directions.driving.DrivingRouter
+import com.yandex.mapkit.directions.driving.DrivingSession
+import com.yandex.mapkit.directions.driving.VehicleOptions
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.layers.ObjectEvent
 import com.yandex.mapkit.map.CameraListener
@@ -41,16 +49,33 @@ import com.yandex.runtime.network.RemoteError
 import ru.toffeantyri.demomapsapp.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationObjectListener,
-    CameraListener {
+    CameraListener, DrivingSession.DrivingRouteListener {
+
+    companion object {
+        private val LOCATION_START = Point(56.856417, 60.636695)
+        private val LOCATION_END = Point(56.878817, 60.610532)
+        val LOCATION_CENTER = Point(
+            (LOCATION_START.latitude + LOCATION_END.latitude) / 2,
+            (LOCATION_START.longitude + LOCATION_END.longitude) / 2
+        )
+    }
 
     private lateinit var binding: ActivityMainBinding
 
     private val mapKit: MapKit by lazy { MapKitFactory.getInstance() }
-    val userLocationKit: UserLocationLayer by lazy {
+    private val userLocationKit: UserLocationLayer by lazy {
         mapKit.createUserLocationLayer(binding.mapview.mapWindow).apply {
             setObjectListener(this@MainActivity)
         }
     }
+
+    private var mapObjects: MapObjectCollection? = null
+
+    private val drivingRouter: DrivingRouter by lazy {
+        DirectionsFactory.getInstance().createDrivingRouter()
+    }
+
+    private var drivingSession: DrivingSession? = null
 
     private lateinit var searchManager: SearchManager
     private lateinit var searchSession: Session
@@ -95,12 +120,16 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     }
 
     private fun initMapViewBehaviour() {
-        val trafficLayer = mapKit.createTrafficLayer(binding.mapview.mapWindow)
-        userLocationKit.isVisible = true
+        userLocationKit.isVisible = false
         SearchFactory.initialize(this)
         searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
+
         with(binding) {
+            mapObjects = mapview.mapWindow.map.mapObjects.addCollection()
+            submitRequest()
+
             mapview.mapWindow.map.addCameraListener(this@MainActivity)
+
             searchEditText.setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     submitQuery(searchEditText.text.toString())
@@ -108,7 +137,10 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
                 false
             }
 
+
+            val trafficLayer = mapKit.createTrafficLayer(mapview.mapWindow)
             setTrafficButtonColor(trafficLayer.isTrafficVisible)
+
             ovalButton.setOnClickListener {
                 trafficLayer.isTrafficVisible = !trafficLayer.isTrafficVisible
                 setTrafficButtonColor(trafficLayer.isTrafficVisible)
@@ -183,7 +215,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     // Search Listener
     override fun onSearchResponse(response: Response) {
         val mapObj: MapObjectCollection = binding.mapview.mapWindow.map.mapObjects
-        mapObj.clear()
+        //mapObj.clear()
         for (searchResult in response.collection.children) {
             searchResult.obj?.geometry?.get(0)?.point?.let { resultLocation ->
                 if (response != null) {
@@ -264,6 +296,49 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     }
 
     override fun onObjectUpdated(userLocationView: UserLocationView, event: ObjectEvent) {
+
+    }
+
+    //DrivenSessionListener
+    override fun onDrivingRoutes(p0: MutableList<DrivingRoute>) {
+        for (route in p0) {
+            mapObjects?.addPolyline(route.geometry)
+        }
+    }
+
+    override fun onDrivingRoutesError(p0: Error) {
+        val errorMessage = when (p0) {
+            else -> getString(R.string.Unknown_error)
+        }
+        Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun submitRequest() {
+        val drivingOptions = DrivingOptions()
+        val vehicleOptions = VehicleOptions()
+        val requestPoints = ArrayList<RequestPoint>()
+
+        requestPoints.add(
+            RequestPoint(
+                LOCATION_START,
+                RequestPointType.WAYPOINT,
+                null,
+                null
+            ),
+        )
+
+        requestPoints.add(
+            RequestPoint(
+                LOCATION_END,
+                RequestPointType.WAYPOINT,
+                null,
+                null
+            ),
+        )
+
+        drivingSession =
+            drivingRouter.requestRoutes(requestPoints, drivingOptions, vehicleOptions, this)
+
 
     }
 
