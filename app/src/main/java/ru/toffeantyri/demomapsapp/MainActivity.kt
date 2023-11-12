@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
+import com.google.android.gms.location.LocationServices
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKit
 import com.yandex.mapkit.MapKitFactory
@@ -59,17 +60,14 @@ import ru.toffeantyri.demomapsapp.model.PointAddressData
 class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationObjectListener,
     CameraListener, DrivingSession.DrivingRouteListener, ListItemClickInterface {
 
-    companion object {
-        private val LOCATION_START = Point(56.856417, 60.636695)
-        private val LOCATION_END = Point(56.878817, 60.610532)
-        val LOCATION_CENTER = Point(
-            (LOCATION_START.latitude + LOCATION_END.latitude) / 2,
-            (LOCATION_START.longitude + LOCATION_END.longitude) / 2
-        )
-    }
-
     private var inputMethodManager: InputMethodManager? = null
     private lateinit var binding: ActivityMainBinding
+
+    private val fusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(
+            this
+        )
+    }
 
     private val mapKit: MapKit by lazy { MapKitFactory.getInstance() }
     private val userLocationKit: UserLocationLayer by lazy {
@@ -77,6 +75,11 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             setObjectListener(this@MainActivity)
         }
     }
+
+    private var startPoint = Point(56.856417, 60.636695)
+    private var endPoint = Point(56.878817, 60.610532)
+    private var centerScreenLocation = getScreenCenter(startPoint, endPoint)
+
 
     private var mapObjects: MapObjectCollection? = null
 
@@ -104,6 +107,15 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             PointAddressData(56.829281, 60.603592, "Green witch")
         )
     }
+
+
+    private fun getScreenCenter(first: Point, second: Point): Point {
+        return Point(
+            (first.latitude + second.latitude) / 2,
+            (first.longitude + second.longitude) / 2,
+        )
+    }
+
 
     private fun submitQuery(query: String) {
         if (query.isBlank()) {
@@ -133,13 +145,6 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         inputMethodManager = this.getSystemService()
-        with(binding.mapview) {
-            mapWindow.map.move(
-                CameraPosition(
-                    Point(56.8389261, 60.6057025), 10f, 0f, 0f
-                ), Animation(Animation.Type.SMOOTH, 5f), null
-            )
-        }
         initLocationCoarsePermission()
         initListView()
         initMapViewBehaviour()
@@ -388,15 +393,26 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     }
 
+    @SuppressLint("MissingPermission")
     override fun itemClick(pos: Int) {
         binding.listView.visibility = View.GONE
         inputMethodManager?.hideSoftInputFromWindow(binding.root.windowToken, 0)
-
         mapObjects?.clear()
-        submitRequest(
-            Point(addressList[pos].lat, addressList[pos].lon),
-            LOCATION_START
-        )
+
+        fusedLocationProviderClient.lastLocation.addOnSuccessListener {
+            startPoint = Point(it.latitude, it.longitude)
+            endPoint = Point(addressList[pos].lat, addressList[pos].lon)
+            centerScreenLocation = getScreenCenter(startPoint, endPoint)
+            userLocationKit.isVisible = true
+            with(binding.mapview) {
+                mapWindow.map.move(
+                    CameraPosition(
+                        centerScreenLocation, 12f, 0f, 0f
+                    ), Animation(Animation.Type.SMOOTH, 3f), null
+                )
+            }
+            submitRequest(startPoint, endPoint)
+        }
     }
 
 }
