@@ -9,10 +9,12 @@ import android.graphics.PointF
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.getSystemService
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKit
 import com.yandex.mapkit.MapKitFactory
@@ -25,6 +27,7 @@ import com.yandex.mapkit.directions.driving.DrivingRouter
 import com.yandex.mapkit.directions.driving.DrivingSession
 import com.yandex.mapkit.directions.driving.VehicleOptions
 import com.yandex.mapkit.geometry.Point
+import com.yandex.mapkit.geometry.PolylineBuilder
 import com.yandex.mapkit.layers.ObjectEvent
 import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition
@@ -65,6 +68,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         )
     }
 
+    private var inputMethodManager: InputMethodManager? = null
     private lateinit var binding: ActivityMainBinding
 
     private val mapKit: MapKit by lazy { MapKitFactory.getInstance() }
@@ -128,7 +132,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        inputMethodManager = this.getSystemService()
         with(binding.mapview) {
             mapWindow.map.move(
                 CameraPosition(
@@ -155,7 +159,6 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
         with(binding) {
             mapObjects = mapview.mapWindow.map.mapObjects.addCollection()
-            submitRequest()
 
             mapview.mapWindow.map.addCameraListener(this@MainActivity)
 
@@ -170,6 +173,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
                     submitQuery(searchEditText.text.toString())
                     listView.visibility = View.GONE
                 }
+
                 false
             }
 
@@ -340,7 +344,11 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     //DrivenSessionListener
     override fun onDrivingRoutes(p0: MutableList<DrivingRoute>) {
         for (route in p0) {
-            mapObjects?.addPolyline(route.geometry)
+            val polyline = PolylineBuilder().apply {
+                append(route.geometry)
+            }.build()
+
+            mapObjects?.addPolyline(polyline)
         }
     }
 
@@ -351,14 +359,14 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
     }
 
-    private fun submitRequest() {
+    private fun submitRequest(startPoint: Point, endPoint: Point) {
         val drivingOptions = DrivingOptions()
         val vehicleOptions = VehicleOptions()
         val requestPoints = ArrayList<RequestPoint>()
 
         requestPoints.add(
             RequestPoint(
-                LOCATION_START,
+                startPoint,
                 RequestPointType.WAYPOINT,
                 null,
                 null
@@ -367,7 +375,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
         requestPoints.add(
             RequestPoint(
-                LOCATION_END,
+                endPoint,
                 RequestPointType.WAYPOINT,
                 null,
                 null
@@ -382,7 +390,13 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     override fun itemClick(pos: Int) {
         binding.listView.visibility = View.GONE
-        //todo
+        inputMethodManager?.hideSoftInputFromWindow(binding.root.windowToken, 0)
+
+        mapObjects?.clear()
+        submitRequest(
+            Point(addressList[pos].lat, addressList[pos].lon),
+            LOCATION_START
+        )
     }
 
 }
