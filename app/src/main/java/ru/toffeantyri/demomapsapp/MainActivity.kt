@@ -119,8 +119,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     private fun submitQuery(query: String) {
         if (query.isBlank()) {
-            val mapObj: MapObjectCollection = binding.mapview.mapWindow.map.mapObjects
-            mapObj.clear()
+            mapObjects?.clear()
             return
         }
 
@@ -163,7 +162,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
 
         with(binding) {
-            mapObjects = mapview.mapWindow.map.mapObjects.addCollection()
+            mapObjects = mapview.mapWindow.map.mapObjects
 
             mapview.mapWindow.map.addCameraListener(this@MainActivity)
 
@@ -175,6 +174,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
             searchEditText.setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    mapObjects?.clear()
                     submitQuery(searchEditText.text.toString())
                     listView.visibility = View.GONE
                 }
