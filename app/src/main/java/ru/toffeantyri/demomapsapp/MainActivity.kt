@@ -399,8 +399,13 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         inputMethodManager?.hideSoftInputFromWindow(binding.root.windowToken, 0)
         mapObjects?.clear()
 
-        fusedLocationProviderClient.lastLocation.addOnSuccessListener {
-            startPoint = Point(it.latitude, it.longitude)
+        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+            if (location == null) {
+                Toast.makeText(this, "Начальное местоположение неизвестно", Toast.LENGTH_SHORT)
+                    .show()
+                return@addOnSuccessListener
+            }
+            startPoint = Point(location.latitude, location.longitude)
             endPoint = Point(addressList[pos].lat, addressList[pos].lon)
             centerScreenLocation = getScreenCenter(startPoint, endPoint)
             userLocationKit.isVisible = true
