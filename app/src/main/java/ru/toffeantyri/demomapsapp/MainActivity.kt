@@ -1,11 +1,13 @@
 package ru.toffeantyri.demomapsapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.PointF
 import android.os.Bundle
+import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,9 +49,12 @@ import com.yandex.runtime.image.ImageProvider
 import com.yandex.runtime.network.NetworkError
 import com.yandex.runtime.network.RemoteError
 import ru.toffeantyri.demomapsapp.databinding.ActivityMainBinding
+import ru.toffeantyri.demomapsapp.list_adapter.AddressListAdapter
+import ru.toffeantyri.demomapsapp.list_adapter.ListItemClickInterface
+import ru.toffeantyri.demomapsapp.model.PointAddressData
 
 class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationObjectListener,
-    CameraListener, DrivingSession.DrivingRouteListener {
+    CameraListener, DrivingSession.DrivingRouteListener, ListItemClickInterface {
 
     companion object {
         private val LOCATION_START = Point(56.856417, 60.636695)
@@ -79,6 +84,22 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     private lateinit var searchManager: SearchManager
     private lateinit var searchSession: Session
+
+    private val addressList: List<PointAddressData> by lazy {
+        getAddressListPlease()
+    }
+
+    private val listAdapter by lazy {
+        AddressListAdapter(this, R.layout.address_item, addressList, this)
+    }
+
+    private fun getAddressListPlease(): List<PointAddressData> {
+        return listOf(
+            PointAddressData(56.856417, 60.636695, "Home"),
+            PointAddressData(56.878817, 60.610532, "Work"),
+            PointAddressData(56.829281, 60.603592, "Green witch")
+        )
+    }
 
     private fun submitQuery(query: String) {
         if (query.isBlank()) {
@@ -116,9 +137,17 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             )
         }
         initLocationCoarsePermission()
+        initListView()
         initMapViewBehaviour()
     }
 
+    private fun initListView() {
+        with(binding) {
+            listView.adapter = listAdapter
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     private fun initMapViewBehaviour() {
         userLocationKit.isVisible = false
         SearchFactory.initialize(this)
@@ -130,9 +159,16 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
             mapview.mapWindow.map.addCameraListener(this@MainActivity)
 
+            searchEditText.setOnTouchListener { v, event ->
+                listView.visibility = View.VISIBLE
+                false
+            }
+
+
             searchEditText.setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     submitQuery(searchEditText.text.toString())
+                    listView.visibility = View.GONE
                 }
                 false
             }
@@ -245,6 +281,8 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         cameraUpdateReason: CameraUpdateReason,
         finished: Boolean
     ) {
+        binding.listView.visibility = View.GONE
+
         val requestText = binding.searchEditText.text.toString()
         if (finished && requestText.isNotBlank()) {
             submitQuery(requestText)
@@ -340,6 +378,11 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             drivingRouter.requestRoutes(requestPoints, drivingOptions, vehicleOptions, this)
 
 
+    }
+
+    override fun itemClick(pos: Int) {
+        binding.listView.visibility = View.GONE
+        //todo
     }
 
 }

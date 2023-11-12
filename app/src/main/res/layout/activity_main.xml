@@ -26,11 +26,21 @@
         android:paddingVertical="@dimen/medium_margin"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <ListView
+        android:id="@+id/list_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="100dp"
+        android:visibility="gone"
+        android:layout_marginHorizontal="@dimen/default_margin"
+        tools:listitem="@layout/address_item"
+        app:layout_constraintTop_toBottomOf="@id/search_edit_text" />
+
     <androidx.cardview.widget.CardView
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_marginBottom="@dimen/default_margin"
         android:layout_marginEnd="@dimen/large_margin"
+        android:layout_marginBottom="@dimen/default_margin"
         app:cardCornerRadius="100dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
