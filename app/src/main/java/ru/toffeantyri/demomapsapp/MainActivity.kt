@@ -17,7 +17,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
 import com.google.android.gms.location.LocationServices
 import com.yandex.mapkit.Animation
-import com.yandex.mapkit.MapKit
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.RequestPoint
 import com.yandex.mapkit.RequestPointType
@@ -45,7 +44,6 @@ import com.yandex.mapkit.search.SearchManager
 import com.yandex.mapkit.search.SearchManagerType
 import com.yandex.mapkit.search.SearchOptions
 import com.yandex.mapkit.search.Session
-import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
 import com.yandex.runtime.Error
@@ -55,10 +53,13 @@ import com.yandex.runtime.network.RemoteError
 import ru.toffeantyri.demomapsapp.databinding.ActivityMainBinding
 import ru.toffeantyri.demomapsapp.list_adapter.AddressListAdapter
 import ru.toffeantyri.demomapsapp.list_adapter.ListItemClickInterface
+import ru.toffeantyri.demomapsapp.mapKit.CustomMapKitImpl
 import ru.toffeantyri.demomapsapp.model.PointAddressData
+import kotlin.random.Random
 
 class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationObjectListener,
     CameraListener, DrivingSession.DrivingRouteListener, ListItemClickInterface {
+
 
     private var inputMethodManager: InputMethodManager? = null
     private lateinit var binding: ActivityMainBinding
@@ -69,12 +70,8 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         )
     }
 
-    private val mapKit: MapKit by lazy { MapKitFactory.getInstance() }
-    private val userLocationKit: UserLocationLayer by lazy {
-        mapKit.createUserLocationLayer(binding.mapview.mapWindow).apply {
-            setObjectListener(this@MainActivity)
-        }
-    }
+    private val mapKit by lazy { CustomMapKitImpl(binding.mapview.mapWindow) }
+
 
     private var startPoint = Point(56.856417, 60.636695)
     private var endPoint = Point(56.878817, 60.610532)
@@ -101,6 +98,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     }
 
     private fun getAddressListPlease(): List<PointAddressData> {
+        binding
         return listOf(
             PointAddressData(56.856417, 60.636695, "Home"),
             PointAddressData(56.878817, 60.610532, "Work"),
@@ -157,7 +155,10 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initMapViewBehaviour() {
-        userLocationKit.isVisible = false
+        mapKit.setUserLocation(false).apply {
+            setObjectListener(this@MainActivity)
+        }
+
         SearchFactory.initialize(this)
         searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
 
@@ -183,7 +184,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             }
 
 
-            val trafficLayer = mapKit.createTrafficLayer(mapview.mapWindow)
+            val trafficLayer = mapKit.setTrafficLayer(false)
             setTrafficButtonColor(trafficLayer.isTrafficVisible)
 
             ovalButton.setOnClickListener {
@@ -300,7 +301,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     // user object listener
     override fun onObjectAdded(userLocationView: UserLocationView) {
-        userLocationKit.setAnchor(
+        mapKit.setUserLocation(true).setAnchor(
             PointF(
                 (binding.mapview.width * 0.5).toFloat(), (binding.mapview.height * 0.5).toFloat()
             ),
@@ -348,12 +349,18 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     //DrivenSessionListener
     override fun onDrivingRoutes(p0: MutableList<DrivingRoute>) {
+        val colorList = listOf(Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW)
         for (route in p0) {
             val polyline = PolylineBuilder().apply {
                 append(route.geometry)
             }.build()
 
-            mapObjects?.addPolyline(polyline)
+            mapObjects?.addPolyline(polyline)?.apply {
+                val index = Random.nextInt(0, colorList.lastIndex)
+                val color = colorList[index]
+                setStrokeColor(color)
+                outlineColor = color
+            }
         }
     }
 
@@ -408,7 +415,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             startPoint = Point(location.latitude, location.longitude)
             endPoint = Point(addressList[pos].lat, addressList[pos].lon)
             centerScreenLocation = getScreenCenter(startPoint, endPoint)
-            userLocationKit.isVisible = true
+            mapKit.setUserLocation(true)
             with(binding.mapview) {
                 mapWindow.map.move(
                     CameraPosition(
