@@ -36,13 +36,8 @@ import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.map.MapObjectCollection
 import com.yandex.mapkit.map.RotationType
-import com.yandex.mapkit.map.VisibleRegion
-import com.yandex.mapkit.map.VisibleRegionUtils
 import com.yandex.mapkit.search.Response
-import com.yandex.mapkit.search.SearchFactory
-import com.yandex.mapkit.search.SearchManager
 import com.yandex.mapkit.search.SearchManagerType
-import com.yandex.mapkit.search.SearchOptions
 import com.yandex.mapkit.search.Session
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
@@ -70,7 +65,13 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         )
     }
 
-    private val mapKit by lazy { CustomMapKitImpl(binding.mapview.mapWindow) }
+    private val mapKit by lazy {
+        CustomMapKitImpl(
+            this,
+            binding.mapview.mapWindow,
+            this
+        )
+    }
 
 
     private var startPoint = Point(56.856417, 60.636695)
@@ -78,16 +79,12 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     private var centerScreenLocation = getScreenCenter(startPoint, endPoint)
 
 
-    private var mapObjects: MapObjectCollection? = null
-
     private val drivingRouter: DrivingRouter by lazy {
         DirectionsFactory.getInstance().createDrivingRouter()
     }
 
     private var drivingSession: DrivingSession? = null
 
-    private lateinit var searchManager: SearchManager
-    private lateinit var searchSession: Session
 
     private val addressList: List<PointAddressData> by lazy {
         getAddressListPlease()
@@ -115,28 +112,6 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     }
 
 
-    private fun submitQuery(query: String) {
-        if (query.isBlank()) {
-            mapObjects?.clear()
-            return
-        }
-
-        searchSession = searchManager.submit(
-            query,
-            VisibleRegionUtils.toPolygon(
-                VisibleRegion(
-                    binding.mapview.mapWindow.map.visibleRegion.topLeft,
-                    binding.mapview.mapWindow.map.visibleRegion.topRight,
-                    binding.mapview.mapWindow.map.visibleRegion.bottomLeft,
-                    binding.mapview.mapWindow.map.visibleRegion.bottomRight,
-                )
-            ),
-            SearchOptions(),
-            this
-        )
-    }
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -158,12 +133,9 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         mapKit.setUserLocation(false).apply {
             setObjectListener(this@MainActivity)
         }
-
-        SearchFactory.initialize(this)
-        searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
+        mapKit.initSearchManager(SearchManagerType.COMBINED)
 
         with(binding) {
-            mapObjects = mapview.mapWindow.map.mapObjects
 
             mapview.mapWindow.map.addCameraListener(this@MainActivity)
 
@@ -175,8 +147,8 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
             searchEditText.setOnEditorActionListener { v, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                    mapObjects?.clear()
-                    submitQuery(searchEditText.text.toString())
+                    mapKit.clearMapObjects()
+                    mapKit.submitQuery(searchEditText.text.toString())
                     listView.visibility = View.GONE
                 }
 
@@ -295,7 +267,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
         val requestText = binding.searchEditText.text.toString()
         if (finished && requestText.isNotBlank()) {
-            submitQuery(requestText)
+            mapKit.submitQuery(requestText)
         }
     }
 
@@ -355,7 +327,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
                 append(route.geometry)
             }.build()
 
-            mapObjects?.addPolyline(polyline)?.apply {
+            mapKit.getMapObjects().addPolyline(polyline).apply {
                 val index = Random.nextInt(0, colorList.lastIndex)
                 val color = colorList[index]
                 setStrokeColor(color)
@@ -404,7 +376,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     override fun itemClick(pos: Int) {
         binding.listView.visibility = View.GONE
         inputMethodManager?.hideSoftInputFromWindow(binding.root.windowToken, 0)
-        mapObjects?.clear()
+        mapKit.clearMapObjects()
 
         fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
             if (location == null) {
