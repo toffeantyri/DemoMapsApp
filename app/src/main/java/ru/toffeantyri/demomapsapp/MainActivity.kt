@@ -18,14 +18,8 @@ import androidx.core.content.getSystemService
 import com.google.android.gms.location.LocationServices
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
-import com.yandex.mapkit.RequestPoint
-import com.yandex.mapkit.RequestPointType
-import com.yandex.mapkit.directions.DirectionsFactory
-import com.yandex.mapkit.directions.driving.DrivingOptions
 import com.yandex.mapkit.directions.driving.DrivingRoute
-import com.yandex.mapkit.directions.driving.DrivingRouter
 import com.yandex.mapkit.directions.driving.DrivingSession
-import com.yandex.mapkit.directions.driving.VehicleOptions
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.geometry.PolylineBuilder
 import com.yandex.mapkit.layers.ObjectEvent
@@ -60,30 +54,22 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
     private lateinit var binding: ActivityMainBinding
 
     private val fusedLocationProviderClient by lazy {
-        LocationServices.getFusedLocationProviderClient(
-            this
-        )
+        LocationServices.getFusedLocationProviderClient(this)
     }
 
     private val mapKit by lazy {
         CustomMapKitImpl(
             this,
             binding.mapview.mapWindow,
+            this,
             this
         )
     }
 
 
-    private var startPoint = Point(56.856417, 60.636695)
-    private var endPoint = Point(56.878817, 60.610532)
+    private var startPoint = Point(56.856417, 60.636695) //todo
+    private var endPoint = Point(56.878817, 60.610532)//todo
     private var centerScreenLocation = getScreenCenter(startPoint, endPoint)
-
-
-    private val drivingRouter: DrivingRouter by lazy {
-        DirectionsFactory.getInstance().createDrivingRouter()
-    }
-
-    private var drivingSession: DrivingSession? = null
 
 
     private val addressList: List<PointAddressData> by lazy {
@@ -343,34 +329,6 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show()
     }
 
-    private fun submitRequest(startPoint: Point, endPoint: Point) {
-        val drivingOptions = DrivingOptions()
-        val vehicleOptions = VehicleOptions()
-        val requestPoints = ArrayList<RequestPoint>()
-
-        requestPoints.add(
-            RequestPoint(
-                startPoint,
-                RequestPointType.WAYPOINT,
-                null,
-                null
-            ),
-        )
-
-        requestPoints.add(
-            RequestPoint(
-                endPoint,
-                RequestPointType.WAYPOINT,
-                null,
-                null
-            ),
-        )
-
-        drivingSession =
-            drivingRouter.requestRoutes(requestPoints, drivingOptions, vehicleOptions, this)
-
-
-    }
 
     @SuppressLint("MissingPermission")
     override fun itemClick(pos: Int) {
@@ -379,6 +337,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         mapKit.clearMapObjects()
 
         fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+            mapKit.setUserLocation(true)
             if (location == null) {
                 Toast.makeText(this, "Начальное местоположение неизвестно", Toast.LENGTH_SHORT)
                     .show()
@@ -395,7 +354,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
                     ), Animation(Animation.Type.SMOOTH, 3f), null
                 )
             }
-            submitRequest(startPoint, endPoint)
+            mapKit.submitRequest(startPoint, endPoint)
         }
     }
 

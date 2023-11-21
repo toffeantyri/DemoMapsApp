@@ -2,6 +2,15 @@ package ru.toffeantyri.demomapsapp.mapKit
 
 import android.content.Context
 import com.yandex.mapkit.MapKitFactory
+import com.yandex.mapkit.RequestPoint
+import com.yandex.mapkit.RequestPointType
+import com.yandex.mapkit.directions.DirectionsFactory
+import com.yandex.mapkit.directions.driving.DrivingOptions
+import com.yandex.mapkit.directions.driving.DrivingRouter
+import com.yandex.mapkit.directions.driving.DrivingSession
+import com.yandex.mapkit.directions.driving.DrivingSession.DrivingRouteListener
+import com.yandex.mapkit.directions.driving.VehicleOptions
+import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.MapObjectCollection
 import com.yandex.mapkit.map.MapWindow
 import com.yandex.mapkit.map.VisibleRegion
@@ -17,7 +26,8 @@ import com.yandex.mapkit.user_location.UserLocationLayer
 class CustomMapKitImpl(
     private val context: Context,
     private val mapWindow: MapWindow,
-    private val searchSessionListener: Session.SearchListener
+    private val searchSessionListener: Session.SearchListener,
+    private val drivingRouteListener: DrivingRouteListener
 ) {
 
     init {
@@ -28,9 +38,14 @@ class CustomMapKitImpl(
 
     private val mapKit = MapKitFactory.getInstance()
 
-
     private var searchManager: SearchManager? = null
     private var searchSession: Session? = null
+
+    private val drivingRouter: DrivingRouter by lazy {
+        DirectionsFactory.getInstance().createDrivingRouter()
+    }
+    private var drivingSession: DrivingSession? = null
+
 
     private val userLocationLayer: UserLocationLayer by lazy {
         mapKit.createUserLocationLayer(mapWindow)
@@ -57,11 +72,6 @@ class CustomMapKitImpl(
 
 
     fun submitQuery(query: String, searchOptions: SearchOptions = SearchOptions()) {
-        if (query.isBlank()) {
-            mapObjects.clear()
-            return
-        }
-
         searchSession = searchManager?.submit(
             query,
             VisibleRegionUtils.toPolygon(
@@ -83,6 +93,28 @@ class CustomMapKitImpl(
 
     fun getMapObjects(): MapObjectCollection {
         return mapObjects
+    }
+
+    fun submitRequest(startPoint: Point, endPoint: Point) {
+        val drivingOptions = DrivingOptions()
+        val vehicleOptions = VehicleOptions()
+        val requestPoints = ArrayList<RequestPoint>()
+
+        requestPoints.add(
+            RequestPoint(startPoint, RequestPointType.WAYPOINT, null, null),
+        )
+
+        requestPoints.add(
+            RequestPoint(endPoint, RequestPointType.WAYPOINT, null, null),
+        )
+
+        drivingSession =
+            drivingRouter.requestRoutes(
+                requestPoints,
+                drivingOptions,
+                vehicleOptions,
+                drivingRouteListener
+            )
     }
 
 }
