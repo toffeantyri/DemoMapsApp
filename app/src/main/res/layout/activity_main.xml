@@ -30,11 +30,11 @@
         android:id="@+id/list_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/default_margin"
         android:maxHeight="100dp"
         android:visibility="gone"
-        android:layout_marginHorizontal="@dimen/default_margin"
-        tools:listitem="@layout/address_item"
-        app:layout_constraintTop_toBottomOf="@id/search_edit_text" />
+        app:layout_constraintTop_toBottomOf="@id/search_edit_text"
+        tools:listitem="@layout/address_item" />
 
     <androidx.cardview.widget.CardView
         android:layout_width="50dp"
@@ -52,6 +52,25 @@
             android:layout_gravity="center"
             android:background="@drawable/oval"
             android:backgroundTint="@color/orange" />
+
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="@dimen/large_margin"
+        android:layout_marginBottom="@dimen/default_margin"
+        app:cardCornerRadius="100dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/to_user_location_button"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:background="@drawable/oval"
+            android:backgroundTint="@android:color/holo_blue_bright" />
 
     </androidx.cardview.widget.CardView>
 

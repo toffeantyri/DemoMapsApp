@@ -114,7 +114,7 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
         }
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint("ClickableViewAccessibility", "MissingPermission")
     private fun initMapViewBehaviour() {
         mapKit.setUserLocation(false).apply {
             setObjectListener(this@MainActivity)
@@ -128,6 +128,44 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
             searchEditText.setOnTouchListener { v, event ->
                 listView.visibility = View.VISIBLE
                 false
+            }
+
+
+            if (mapKit.userLocationTrackingEnabled) {
+                toUserLocationButton.backgroundTintList =
+                    ColorStateList.valueOf(getColor(android.R.color.holo_blue_bright))
+            } else {
+                toUserLocationButton.backgroundTintList =
+                    ColorStateList.valueOf(getColor(android.R.color.darker_gray))
+            }
+
+            toUserLocationButton.setOnClickListener {
+                with(mapKit) {
+                    if (userLocationTrackingEnabled) {
+                        mapKit.setUserLocation(false)
+                        binding.mapview.setUserLocationTracking(false)
+                        toUserLocationButton.backgroundTintList =
+                            ColorStateList.valueOf(getColor(android.R.color.darker_gray))
+                    } else {
+                        mapKit.setUserLocation(true)
+
+
+                        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+                            startPoint = Point(location.latitude, location.longitude)
+                            endPoint = Point(location.latitude, location.longitude)
+                        }
+
+                        mapview.mapWindow.map.move(
+                            CameraPosition(
+                                getScreenCenter(startPoint, endPoint), 12f, 0f, 0f
+                            ), Animation(Animation.Type.SMOOTH, 3f), null
+                        )
+
+                        binding.mapview.setUserLocationTracking(true)
+                        toUserLocationButton.backgroundTintList =
+                            ColorStateList.valueOf(getColor(android.R.color.holo_blue_bright))
+                    }
+                }
             }
 
 
@@ -259,16 +297,6 @@ class MainActivity : AppCompatActivity(), Session.SearchListener, UserLocationOb
 
     // user object listener
     override fun onObjectAdded(userLocationView: UserLocationView) {
-        mapKit.setUserLocation(true).setAnchor(
-            PointF(
-                (binding.mapview.width * 0.5).toFloat(), (binding.mapview.height * 0.5).toFloat()
-            ),
-            PointF(
-                (binding.mapview.width * 0.5).toFloat(), (binding.mapview.height * 0.83).toFloat()
-            )
-        )
-
-
         userLocationView.arrow.setIcon(
             ImageProvider.fromResource(this, R.drawable.user_location_ic),
             IconStyle().setRotationType(RotationType.ROTATE)

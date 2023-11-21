@@ -1,6 +1,7 @@
 package ru.toffeantyri.demomapsapp.mapKit
 
 import android.content.Context
+import android.graphics.PointF
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.RequestPoint
 import com.yandex.mapkit.RequestPointType
@@ -15,6 +16,7 @@ import com.yandex.mapkit.map.MapObjectCollection
 import com.yandex.mapkit.map.MapWindow
 import com.yandex.mapkit.map.VisibleRegion
 import com.yandex.mapkit.map.VisibleRegionUtils
+import com.yandex.mapkit.mapview.MapView
 import com.yandex.mapkit.search.SearchFactory
 import com.yandex.mapkit.search.SearchManager
 import com.yandex.mapkit.search.SearchManagerType
@@ -55,8 +57,26 @@ class CustomMapKitImpl(
         mapKit.createTrafficLayer(mapWindow)
     }
 
+    var userLocationTrackingEnabled: Boolean = false
+
     fun setUserLocation(visibility: Boolean): UserLocationLayer {
         return userLocationLayer.apply { isVisible = visibility }
+    }
+
+    fun MapView.setUserLocationTracking(enable: Boolean) {
+        userLocationTrackingEnabled = enable
+        if (enable) {
+            userLocationLayer.setAnchor(
+                PointF(
+                    (this.width * 0.5).toFloat(), (this.height * 0.5).toFloat()
+                ),
+                PointF(
+                    (this.width * 0.5).toFloat(), (this.height * 0.83).toFloat()
+                )
+            )
+        } else {
+            userLocationLayer.resetAnchor()
+        }
     }
 
 
